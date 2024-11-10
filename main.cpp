@@ -209,23 +209,37 @@ Key generateKey(const string &str) {
     return out;
 }
 
-string getOutputFile(string filename, bool doScramble) {
-    string suffix = ".scram.png";
-    int idx = filename.find_last_of(".");
-    string prefix = filename;
+bool endsWith(string check, string criteria) {
+    if (check.size() >= criteria.size()) {
+        string match = check.substr(check.size() - criteria.size(), check.size());
+        return match == criteria;
+    }
+    return false;
+}
 
+string getOutputFile(string filename, bool doScramble) {
+    string scrambledSuffix = ".scrambled.png";
+    string unscrambledSuffix = ".unscrambled.png";
+
+    string prefix = filename;
+    int idx = filename.find_last_of(".");
     if (idx > 0) {
         prefix = filename.substr(0, idx);
     }
 
     if (doScramble) {
-        return prefix + suffix;
-    } else {
-        int scramIdx = filename.find_last_of(suffix);
-        if (scramIdx > 0) {
-            return filename.substr(0, scramIdx - (suffix.size() - 1)) + ".unscram.png";
+        if (endsWith(filename, unscrambledSuffix)) {
+            int end = filename.size() - unscrambledSuffix.size();
+            prefix = filename.substr(0, end);
         }
-        return prefix + ".png";
+        return prefix + scrambledSuffix;
+
+    } else {
+        if (endsWith(filename, scrambledSuffix)) {
+            int end = filename.size() - scrambledSuffix.size();
+            prefix = filename.substr(0, end);
+        }
+        return prefix + unscrambledSuffix;
     }
 }
 
@@ -242,18 +256,19 @@ int main(int argc, char *argv[]) {
     for (int i=1; i<argc; i++) {
         string arg = argv[i];
         if (arg == "--help") {
-            cout << "Scrambler: Usage[./scrambler (scramble|unscramble) <filename> <password>]" << endl;
-            cout << "   scramble: Scrambles an image file" << endl;
-            cout << "   unscramble: Unscrambles an image file" << endl;
-            cout << "   filename: Path to an image file to process" << endl;
-            cout << "   password: Password to use to scramble the file, if not specified, will be prompted" << endl;
+            cout << "Usage scrambler METHOD FILENAME [PASSWORD]" << endl;
+            cout << "   METHOD:" << endl;
+            cout << "     scramble: will scramble the image" << endl;
+            cout << "     unscramble: will unscramble the image" << endl;
+            cout << "   FILENAME: path to an image file to process" << endl;
+            cout << "   PASSWORD: the password used to process the image, will also use the SCRAMBLE_PASSWORD environment variable if set" << endl;
             exit(0);
         }
 
         switch (i) {
             case 1:
                 if (arg != "scramble" && arg != "unscramble") {
-                    cerr << "Invalid argument for 'scramble' or 'unscramble'" << endl;
+                    cerr << "Invalid argument for METHOD" << endl;
                     exit(1);
                 }
                 scramble = arg == "scramble";
@@ -283,11 +298,11 @@ int main(int argc, char *argv[]) {
         char *pw_env = getenv("SCRAMBLE_PASSWORD");
 
         if (pw_env == NULL) {
-            cerr << "You must specify a password" << endl;
+            cerr << "You must specify a password, or set the SCRAMBLE_PASSWORD environment variable" << endl;
             exit(1);
-        } else {
-            password = pw_env;
         }
+
+        password = pw_env;
     }
 
     Mat image = imread(filename, IMREAD_COLOR);
