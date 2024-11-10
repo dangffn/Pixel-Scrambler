@@ -14,6 +14,10 @@ typedef vector<int> Key;
 
 int kSS = 128;
 
+/**
+ * Create a sha256 hash of an input password.
+ * Use the integers as array indices to scramble the initial key.
+ */
 Key sha256Key(const string &str) {
     // Generate a vector of ints from a sha256 hash.
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -22,13 +26,15 @@ Key sha256Key(const string &str) {
     SHA256_Update(&sha256, str.c_str(), str.size());
     SHA256_Final(hash, &sha256);
     Key out = Key(SHA256_DIGEST_LENGTH);
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
+    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         out[i] = (int)hash[i];
     }
     return out;
 }
 
+/**
+ * Rotate the key integers incrementally.
+ */
 int bitRot(int n, int bits) {
     // For a given byte, rotate the bits to extend a key.
     int n1 = n >> (8 - bits);
@@ -36,6 +42,11 @@ int bitRot(int n, int bits) {
     return n1 | n2;
 }
 
+/**
+ * Extend the sha256 key integers by rotating the bits for each index.
+ * Use the resulting numbers to scramble a sequential array of numbers.
+ * This will be used as the scramble key.
+ */
 Key extendKey(Key key) {
     // Output key.
     Key out = {};
@@ -56,6 +67,9 @@ Key extendKey(Key key) {
     return out;
 }
 
+/**
+ * Convert an image to a matrix of pixels.
+ */
 vector<Row> toArray(Mat image) {
     Row row = Row(image.cols, 0);
     vector<Row> array = vector<Row>(image.rows, row);
@@ -67,6 +81,9 @@ vector<Row> toArray(Mat image) {
     return array;
 }
 
+/**
+ * Convert a matrix of pixels to an image.
+ */
 Mat toImage(vector<Row> array, int dtype) {
     Mat out = Mat(array.size(), array[0].size(), dtype);
     for (int y=0; y<array.size(); y++) {
@@ -79,6 +96,9 @@ Mat toImage(vector<Row> array, int dtype) {
 
 template <typename T>
 
+/**
+ * Rotate a row of pixels or key integers.
+ */
 T rotate(T row, int n) {
     // Rotate a single vector by `n` indices.
     if (n < 0) n = row.size() - abs(n);
@@ -93,6 +113,9 @@ T rotate(T row, int n) {
 
 template <typename T>
 
+/**
+ * Rotate a pixel matrix clockwise.
+ */
 vector<T> rotate_cw(vector<T> array) {
     // Rotate a 2d vector clockwise.
     T row = T(array.size(), 0);
@@ -108,6 +131,9 @@ vector<T> rotate_cw(vector<T> array) {
 
 template <typename T>
 
+/**
+ * Rotate a pixel matrix counter-clockwise.
+ */
 vector<T> rotate_ccw(vector<T> array) {
     // Rotate a 2d vector counter-clockwise.
     T row = T(array.size(), 0);
@@ -130,6 +156,9 @@ vector<T> rotate_2d(vector<T> array, bool cw) {
 
 template <typename T>
 
+/**
+ * Apply a slant to a pixel matrix.
+ */
 vector<T> slant(vector<T> array, bool do_scramble) {
     float diff = (float)array[0].size() / (float)array.size();
     if (!do_scramble) {
@@ -146,6 +175,9 @@ vector<T> slant(vector<T> array, bool do_scramble) {
 
 template <typename T>
 
+/**
+ * Scramble a pixel matrix from top to bottom with a scramble key.
+ */
 vector<T> scramble(vector<T> array, Key key, bool do_scramble) {
     T row = T(array[0].size(), 0);
     vector<T> out = vector<T>(array.size(), row);
@@ -167,6 +199,9 @@ vector<T> scramble(vector<T> array, Key key, bool do_scramble) {
 
 template <typename T>
 
+/**
+ * Full scramble process.
+ */
 vector<T> doScramble(vector<T> array, Key key, bool forward) {
     array = scramble<T>(array, key, forward);
     array = slant<T>(array, forward);
@@ -187,6 +222,9 @@ vector<T> doScramble(vector<T> array, Key key, bool forward) {
     return array;
 }
 
+/**
+ * Generate a scramble key from an input password.
+ */
 Key generateKey(const string &str) {
     Key bytes = sha256Key(str);
     Key vect = extendKey(bytes);
